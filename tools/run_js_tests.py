@@ -38,6 +38,22 @@ function ok(name, cond, extra) {
 }
 function near(a, b, eps) { return Math.abs(a - b) <= (eps === undefined ? 1e-4 : eps); }
 
+// --- 立体浮雕网格 ---------------------------------------------------------
+{
+  const w = 8, h = 4, f = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) f[i] = (i % w) / (w - 1);   // 左低右高的斜坡
+  const m = E.reliefMesh(f, w, h, { relief: 0.2, base: 0.05 });
+  ok("浮雕：网格不超过原图", m.gw === 8 && m.gh === 4, `${m.gw}x${m.gh}`);
+  const nTop = m.gw * m.gh;
+  ok("浮雕：左低右高", m.positions[2] < m.positions[(m.gw - 1) * 3 + 2], `${m.positions[2]},${m.positions[(m.gw - 1) * 3 + 2]}`);
+  ok("浮雕：最高点 = relief", Math.abs(Math.max(...Array.from({length: nTop}, (_, k) => m.positions[k * 3 + 2])) - 0.2) < 0.03);
+  ok("浮雕：长边归一到 2", near(m.positions[0], -1) && near(m.positions[(m.gw - 1) * 3], 1));
+  let maxIdx = 0; for (const v of m.indices) maxIdx = Math.max(maxIdx, v);
+  ok("浮雕：索引不越界", maxIdx < m.positions.length / 3, maxIdx);
+  ok("浮雕：斜坡法线朝左上", m.normals[3 * (m.gw + 3)] < 0 && m.normals[3 * (m.gw + 3) + 2] > 0);
+  const big = E.reliefMesh(new Float32Array(1000 * 500), 1000, 500, { maxGrid: 100 });
+  ok("浮雕：大图降采样", big.gw === 100 && big.gh === 50, `${big.gw}x${big.gh}`);
+}
 // --- 输入色阶 -------------------------------------------------------------
 {
   const field = new Float32Array([0, 0.25, 0.5, 0.75, 1]);
