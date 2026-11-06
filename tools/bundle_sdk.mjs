@@ -9,10 +9,12 @@
  *   - 去掉 export 前缀
  *   - 包一层 IIFE，把公开符号挂到 window.LuminaWorkshop
  *
- * 产物可复现：只依赖 node_modules 里的 SDK 版本，不联网、无时间戳。
+ * 产物可复现：只依赖 node_modules 里的 SDK 版本（由 package.json 的不可变
+ * Release URL 安装，见 pnpm-lock.yaml 的 integrity），不联网、无时间戳；
+ * 中间产物写到 .tmp/，不进仓库，也不从 vendor/ 之类的本地副本读取。
  */
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -20,7 +22,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PKG = join(ROOT, "node_modules", "@lumina", "workshop-sdk", "package.json");
 const DIST = join(ROOT, "node_modules", "@lumina", "workshop-sdk", "dist");
 const HTML = join(ROOT, "ui", "index.html");
-const OUT = join(ROOT, "vendor", "sdk.bundle.js");
+const OUT_DIR = join(ROOT, ".tmp");
+const OUT = join(OUT_DIR, "sdk.bundle.js");
 
 const pkg = JSON.parse(readFileSync(PKG, "utf8"));
 if (pkg.version !== "1.0.2") {
@@ -60,6 +63,7 @@ ${body}
 })();
 `;
 
+mkdirSync(OUT_DIR, { recursive: true });
 writeFileSync(OUT, bundle, "utf8");
 const digest = createHash("sha256").update(bundle).digest("hex").slice(0, 16);
 
